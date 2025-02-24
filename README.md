@@ -26,8 +26,6 @@ Use [Wokwi](https://marketplace.visualstudio.com/items?itemName=wokwi.wokwi-vsco
 
 ## Install Platform IO
 
-## Install Platform IO
-
 1. Open Visual Studio Code.
 2. Go to the Extensions view by clicking on the Extensions icon in the Activity Bar on the side of the window or by pressing `Ctrl+Shift+X`.
 3. In the search box, type `PlatformIO`.
