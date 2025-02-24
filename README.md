@@ -35,8 +35,6 @@ Use [Wokwi](https://marketplace.visualstudio.com/items?itemName=wokwi.wokwi-vsco
 
 ## Clone This Repo
 
-## Clone This Repo
-
 1. Open a terminal window.
 2. Navigate to the directory where you want to clone the repository.
 3. Run the following command:
