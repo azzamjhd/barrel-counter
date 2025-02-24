@@ -1,12 +1,15 @@
 #include <Arduino.h>
 #include <LiquidCrystal_I2C.h>
+#include <Preferences.h>
 #include <WiFi.h>
 #include <Wire.h>
 #include <time.h>
 
+Preferences preferences;
+
 LiquidCrystal_I2C LCD(0x27, 16, 2);
 
-volatile int count = 0;
+volatile uint count = 0;
 volatile unsigned long lastInterruptTime = 0;
 const unsigned long debounceDelay = 100;
 
@@ -15,12 +18,17 @@ void IRAM_ATTR countup() {
   unsigned long interruptTime = millis();
   if (interruptTime - lastInterruptTime > debounceDelay) {
     count++;
+    preferences.putUInt("count", count);
     lastInterruptTime = interruptTime;
   }
 }
 
 void setup() {
   Serial.begin(115200);
+
+  preferences.begin("barrel-count", false);
+
+  count = preferences.getUInt("count", 0);
 
   // Connect to Wi‑Fi for NTP synchronization
   WiFi.begin("Wokwi-GUEST", "");
