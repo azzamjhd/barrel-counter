@@ -33,6 +33,24 @@ Use [Wokwi](https://marketplace.visualstudio.com/items?itemName=wokwi.wokwi-vsco
 5. Click the `Install` button.
 6. After the installation is complete, restart Visual Studio Code if prompted.
 
+## Clone This Repo
+
+## Clone This Repo
+
+1. Open a terminal window.
+2. Navigate to the directory where you want to clone the repository.
+3. Run the following command:
+
+```
+git clone https://github.com/azzamjhd/barrel-counter.git
+```
+
+4. Change into the project directory:
+
+```
+cd barrel-counter
+```
+
 ## Building
 
 This is a [PlatformIO](https://platformio.org) project. To build it, [install PlatformIO](https://docs.platformio.org/en/latest/core/installation/index.html), and then run the following command:
