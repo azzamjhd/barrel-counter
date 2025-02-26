@@ -1,6 +1,6 @@
 # ESP32 BARREL COUNTER
 
-A simple clock that displays the barrel counter on an LCD1602 display.
+A simple counter that displays the barrel counter on an LCD1602 display.
 
 Use [Wokwi](https://marketplace.visualstudio.com/items?itemName=wokwi.wokwi-vscode) to simulate this project.
 
