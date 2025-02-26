@@ -31,7 +31,7 @@ void setup() {
   count = preferences.getUInt("count", 0);
 
   // Connect to Wi‑Fi for NTP synchronization
-  WiFi.begin("Wokwi-GUEST", "");
+  WiFi.begin("eepisnolan", "MaqamulAmin304");
   Serial.print("Connecting to WiFi");
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
