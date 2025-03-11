@@ -11,14 +11,16 @@ LiquidCrystal_I2C LCD(0x27, 16, 2);
 
 volatile uint count = 0;
 volatile unsigned long lastInterruptTime = 0;
+volatile unsigned long lastSaveTime = 0;
+
 const unsigned long debounceDelay = 100;
+const unsigned long saveInterval = 5000;
 
 // Button interrupt function to count events
 void IRAM_ATTR countup() {
   unsigned long interruptTime = millis();
   if (interruptTime - lastInterruptTime > debounceDelay) {
     count++;
-    preferences.putUInt("count", count);
     lastInterruptTime = interruptTime;
   }
 }
@@ -31,7 +33,7 @@ void setup() {
   count = preferences.getUInt("count", 0);
 
   // Connect to Wi‑Fi for NTP synchronization
-  WiFi.begin("eepisnolan", "MaqamulAmin304");
+  WiFi.begin("Wokwi-GUEST", "");
   Serial.print("Connecting to WiFi");
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
@@ -45,8 +47,8 @@ void setup() {
   configTime(gmtOffset_sec, daylightOffset_sec, "pool.ntp.org");
 
   // Setup the interrupt for the button on pin 26
-  pinMode(26, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(26), countup, FALLING);
+  pinMode(26, INPUT_PULLDOWN);
+  attachInterrupt(digitalPinToInterrupt(26), countup, RISING);
 
   // Initialize the LCD
   LCD.init();
@@ -74,5 +76,12 @@ void loop() {
   LCD.print("BARREL: ");
   LCD.print(count);
 
-  delay(500);
+  // Save the count to the preferences every 5 seconds
+  unsigned long currentTime = millis();
+  if (currentTime - lastSaveTime > saveInterval) {
+    preferences.putUInt("count", count);
+    lastSaveTime = currentTime;
+  }
+
+  // delay(500);
 }
