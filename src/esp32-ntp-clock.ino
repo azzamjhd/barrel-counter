@@ -43,11 +43,11 @@ void setup() {
   // Connect to WiFi for NTP synchronization
   WiFi.begin("Damario", "Sebentar");
   Serial.print("Connecting to WiFi");
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("\nWiFi connected.");
+  // while (WiFi.status() != WL_CONNECTED) {
+  //   delay(500);
+  //   Serial.print(".");
+  // }
+  // Serial.println("\nWiFi connected.");
 
   // Configure time for GMT+7 (Jakarta)
   const long gmtOffset_sec = 7 * 3600;  // 7 hours in seconds
