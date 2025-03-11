@@ -41,7 +41,7 @@ void setup() {
   count = preferences.getUInt("count", 0);
 
   // Connect to WiFi for NTP synchronization
-  WiFi.begin("Wokwi-GUEST", "");
+  WiFi.begin("Damario", "Sebentar");
   Serial.print("Connecting to WiFi");
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
