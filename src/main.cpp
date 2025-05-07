@@ -2,7 +2,6 @@
 #include <WiFi.h>
 #include <Wire.h>
 #include <time.h>
-#include <ESPAsyncWebServer.h>
 
 #include <config.h>
 
@@ -20,21 +19,30 @@ void setup() {
   }
   Preferences_Init();
   LCD_Init();
-
+  SD_Init();
   Webserver_Init();
-
-  configTime(gmtOffset_sec, daylightOffset_sec, "pool.ntp.org");
+  RTC_Init();
 }
 
 void loop() {
   Webserver_Loop();
   // Check if the button is pressed
   Read_Switch(50, INPUT_HIGH);
+  String formattedTime;
+
+  static unsigned long lastTimeUpdate = 0;
+  unsigned long nowMillis = millis();
+  if (nowMillis - lastTimeUpdate >= 1000) {
+    lastTimeUpdate = nowMillis;
+    DateTime now = RTC_getTime();
+    char buf2[] = "YY/MM/DD-hh:mm:ss";
+    formattedTime = now.toString(buf2);
+  }
 
   // String currentDateTime = getCurrentLocalTime(true);
-  // LCD.setCursor(0, 0);
-  // LCD.print(currentDateTime);
-  // // Display the _count on the second row
+  LCD.setCursor(0, 0);
+  LCD.print(formattedTime);
+  // Display the _count on the second row
   LCD.setCursor(0, 1);
   LCD.print("BARREL: ");
   LCD.print(_count);

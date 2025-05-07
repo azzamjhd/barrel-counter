@@ -10,6 +10,10 @@
 #include <LiquidCrystal_I2C.h>
 #include <Preferences.h>
 #include <time.h>
+#include <RTClib.h>
+#include <FS.h>
+#include <SD.h>
+#include <SPI.h>
 
 #define DEBUG
 
@@ -35,6 +39,7 @@ extern AsyncWebServer server;
 extern AsyncEventSource events;
 extern LiquidCrystal_I2C LCD;
 extern Preferences preferences;
+extern RTC_DS3231 rtc;
 
 extern volatile uint _count;
 extern ulong _lastSaveTime;
@@ -43,6 +48,7 @@ extern bool _lastState;
 
 void redirectToIndex(AsyncWebServerRequest *request);
 void Webserver_Init();
+void Webserver_Routes();
 void Webserver_Loop();
 void Send_Event(const String &eventName, const String &eventData);
 
@@ -52,5 +58,9 @@ void Save_To_Preferences(ulong interval);
 void Read_Switch(ulong debounceInterval, bool activeHigh);
 String getCurrentLocalTime(bool showDate);
 
+void RTC_Init();
+DateTime RTC_getTime();
+
+void SD_Init();
 
 #endif

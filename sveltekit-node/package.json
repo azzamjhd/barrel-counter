@@ -24,8 +24,10 @@
 	},
 	"dependencies": {
 		"@fortawesome/free-solid-svg-icons": "^6.7.2",
+		"@highcharts/svelte": "^1.1.1",
 		"@tailwindcss/vite": "^4.0.12",
 		"bulma": "^1.0.4",
+		"highcharts": "^12.2.0",
 		"sass": "^1.87.0",
 		"svelte-fa": "^4.0.3",
 		"tailwindcss": "^4.0.12"
