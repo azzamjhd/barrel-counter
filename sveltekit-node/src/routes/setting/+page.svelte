@@ -156,8 +156,8 @@
   <label for="wifi-setting">Set WiFi Connection</label>
   <form onsubmit={submitForm} id="wifi-setting" class="my-2 mx-3">
     <button>Scan WiFi</button>
-    <!-- <div class="md:flex justify-between gap-2">
-      <TextInputWithDropdown
+    <div class="md:flex justify-between gap-2">
+      <!-- <TextInputWithDropdown
         bind:value={fruitValue}
         items={allFruits}
         placeholder="Type to search fruits..."
