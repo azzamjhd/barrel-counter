@@ -32,7 +32,7 @@
   }
 </script>
 
-<div class="fixed bottom-0 z-1 h-12 w-full bg-[var(--pico-card-background-color)] px-5 flex justify-around items-center">
+<div class="fixed bottom-0 z-100 h-12 w-full bg-[var(--pico-card-background-color)] px-5 flex justify-around items-center">
 	<a href="/" aria-label="Home">
 		<svg class="size-[2rem]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g fill="currentColor" stroke-linejoin="miter" stroke-linecap="butt"><polyline points="1 11 12 2 23 11" fill="none" stroke="currentColor" stroke-miterlimit="10" stroke-width="2"></polyline><path d="m5,13v7c0,1.105.895,2,2,2h10c1.105,0,2-.895,2-2v-7" fill="none" stroke="currentColor" stroke-linecap="square" stroke-miterlimit="10" stroke-width="2"></path><line x1="12" y1="22" x2="12" y2="18" fill="none" stroke="currentColor" stroke-linecap="square" stroke-miterlimit="10" stroke-width="2"></line></g></svg>
 	</a>
@@ -65,23 +65,5 @@
     max-width: 64rem;
     margin: 0 auto;
     box-sizing: border-box;
-  }
-
-  footer {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    padding: 12px;
-  }
-
-  footer a {
-    font-weight: bold;
-  }
-
-  @media (min-width: 480px) {
-    footer {
-      padding: 12px 0;
-    }
   }
 </style>

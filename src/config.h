@@ -17,8 +17,6 @@
 
 #define DEBUG
 
-#define SSID "Drum Counter"
-#define PASSWORD "12345678"
 #define EVENT_SOURCE "/counterStream"
 #define DNS_PORT 53
 const IPAddress apIP(192, 168, 2, 1);
@@ -41,12 +39,27 @@ extern LiquidCrystal_I2C LCD;
 extern Preferences preferences;
 extern RTC_DS3231 rtc;
 
+extern String STA_SSID;
+extern String STA_PASSWORD;
+extern String AP_SSID;
+extern String AP_PASSWORD;
+extern int Log_Interval;
+extern ulong _lastLogTime;
+extern uint _lastLogCount;
+
 extern volatile uint _count;
 extern ulong _lastSaveTime;
 extern ulong _lastDebounceTime;
 extern bool _lastState;
 
+extern DateTime _currentDate;
+extern DateTime _lastDate;
+
 void redirectToIndex(AsyncWebServerRequest *request);
+void WiFi_Init();
+void WiFi_Connect();
+String WiFi_Scan();
+
 void Webserver_Init();
 void Webserver_Routes();
 void Webserver_Loop();
@@ -55,12 +68,23 @@ void Send_Event(const String &eventName, const String &eventData);
 void LCD_Init();
 void Preferences_Init();
 void Save_To_Preferences(ulong interval);
-void Read_Switch(ulong debounceInterval, bool activeHigh);
 String getCurrentLocalTime(bool showDate);
 
 void RTC_Init();
 DateTime RTC_getTime();
 
 void SD_Init();
+String listDir(fs::FS &fs, const char * dirname, uint8_t levels);
+void createDir(fs::FS &fs, const char * path);
+void removeDir(fs::FS &fs, const char * path);
+void readFile(fs::FS &fs, const char * path);
+void writeFile(fs::FS &fs, const char * path, const char * message);
+void appendFile(fs::FS &fs, const char * path, const char * message);
+void renameFile(fs::FS &fs, const char * path1, const char * path2);
+void deleteFile(fs::FS &fs, const char * path);
 
+void Log_SD(ulong interval);
+
+void Read_Switch(ulong debounceInterval, bool activeHigh);
+void Reset_Count();
 #endif

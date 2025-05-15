@@ -34,9 +34,16 @@ void loop() {
   unsigned long nowMillis = millis();
   if (nowMillis - lastTimeUpdate >= 1000) {
     lastTimeUpdate = nowMillis;
-    DateTime now = RTC_getTime();
+    _currentDate = RTC_getTime();
     char buf2[] = "YY/MM/DD-hh:mm:ss";
-    formattedTime = now.toString(buf2);
+    formattedTime = _currentDate.toString(buf2);
+    // Serial.println(_currentDate.timestamp());
+
+    // Reset the counter each day
+    if (_currentDate.day() != _lastDate.day()) {
+      Reset_Count();
+      _lastDate = _currentDate;
+    }
   }
 
   // String currentDateTime = getCurrentLocalTime(true);
@@ -48,5 +55,6 @@ void loop() {
   LCD.print(_count);
 
   // Save the _count to the preferences every 5 seconds
-  // Save_To_Preferences(5000);
+  Save_To_Preferences(5000);
+  Log_SD(Log_Interval * 1000);
 }

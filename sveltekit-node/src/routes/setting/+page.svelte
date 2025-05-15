@@ -1,6 +1,24 @@
 <script lang="ts">
   import { onMount } from "svelte";
+  import ConfirmButton from "$lib/ConfirmButton.svelte";
+  import TextInputWithDropdown from "$lib/components/TextInputWithDropdown.svelte";
   let darkTheme = $state(false);
+
+  let fruitValue = $state("");
+  const allFruits = $state([
+    "Apple",
+    "Banana",
+    "Blueberry",
+    "Cherry",
+    "Cranberry",
+    "Date",
+    "Dragonfruit",
+    "Elderberry",
+    "Fig",
+    "Grape",
+    "Guava",
+    "Honeydew",
+  ]);
 
   onMount(() => {
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
@@ -94,31 +112,42 @@
   <label>Reset Counter</label>
   <div class="flex justify-between gap-2 items-center px-3">
     <div class="w-auto text-center self-center">0</div>
-    <button id="reset-counter" class="hidded">Reset</button>
+    <ConfirmButton
+      title="Reset Counter"
+      message="Are you sure you want to reset the counter?"
+      confirmLabel="OK"
+      cancelLabel="Cancel"
+      btnLabel="Reset"
+      onConfirmAction={() => {
+        console.log("Counter reset!");
+      }}
+    />
   </div>
   <hr />
   <label for="set-time-local">Set Local Time</label>
   <div class="flex justify-between gap-2 items-center px-3">
     <div class="text-center self-center">2025/02/01 13:54:39</div>
-    <button onclick={setTime} id="set-time-local" class="hidded">Set</button>
-  </div>
-  <hr />
-  <label for="sensor-type">Set Sensor</label>
-  <div class="my-2 mx-3">
-    <form>
-      <select name="sensor-type" id="sensor-type" required>
-        <option value="" selected disabled>Select your sensor</option>
-        <option value="">Active High</option>
-        <option value="">Active Low</option>
-      </select>
-      <input type="submit" value="Save" />
-    </form>
+    <ConfirmButton
+      title="Set Local Time"
+      message="Are you sure you want to set the RTC time to current device local time?"
+      confirmLabel="OK"
+      cancelLabel="Cancel"
+      btnLabel="Set"
+      onConfirmAction={setTime}
+    />
   </div>
   <hr />
   <label for="wifi-setting">Set WiFi Connection</label>
   <form onsubmit={submitForm} id="wifi-setting" class="my-2 mx-3">
+    <button>Scan WiFi</button>
     <div class="md:flex justify-between gap-2">
-      <input name="ssid" type="ssid" placeholder="SSID" required />
+      <TextInputWithDropdown
+        bind:value={fruitValue}
+        items={allFruits}
+        placeholder="Type to search fruits..."
+        id="fruit-selector"
+      />
+      <!-- <input name="ssid" type="ssid" placeholder="SSID" required /> -->
       <input name="password" type="password" placeholder="Password" required />
     </div>
     <input type="submit" value="Save" />
