@@ -66,6 +66,24 @@
         console.error("Error setting time:", error);
       });
   }
+
+  function resetCounter() {
+    fetch("/resetCount", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    })
+      .then((response) => {
+        if (!response.ok) {
+          console.error("Failed to reset counter:", response.statusText);
+        } else {
+          console.log("Counter reset successfully");
+        }
+      })
+      .catch((error) => {
+        console.error("Error resetting counter:", error);
+      });
+  }
+
   function submitForm(event: Event) {
     event.preventDefault(); // Prevent the default form submission
     const form = event.target as HTMLFormElement;
@@ -118,9 +136,7 @@
       confirmLabel="OK"
       cancelLabel="Cancel"
       btnLabel="Reset"
-      onConfirmAction={() => {
-        console.log("Counter reset!");
-      }}
+      onConfirmAction={resetCounter}
     />
   </div>
   <hr />
@@ -140,14 +156,14 @@
   <label for="wifi-setting">Set WiFi Connection</label>
   <form onsubmit={submitForm} id="wifi-setting" class="my-2 mx-3">
     <button>Scan WiFi</button>
-    <div class="md:flex justify-between gap-2">
+    <!-- <div class="md:flex justify-between gap-2">
       <TextInputWithDropdown
         bind:value={fruitValue}
         items={allFruits}
         placeholder="Type to search fruits..."
         id="fruit-selector"
-      />
-      <!-- <input name="ssid" type="ssid" placeholder="SSID" required /> -->
+      /> -->
+      <input name="ssid" type="ssid" placeholder="SSID" required />
       <input name="password" type="password" placeholder="Password" required />
     </div>
     <input type="submit" value="Save" />
