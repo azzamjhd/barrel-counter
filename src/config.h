@@ -17,7 +17,9 @@
 
 #define DEBUG
 
-#define EVENT_SOURCE "/counterStream"
+#define EVENT_SOURCE_COUNT "/counterStream"
+#define EVENT_SOURCE_COUNT_PER_MINUTE "/counterStreamPerMinute"
+#define EVENT_SOURCE_TIME "/timeStream"
 #define DNS_PORT 53
 const IPAddress apIP(192, 168, 2, 1);
 const IPAddress gateway(255, 255, 255, 0);
@@ -34,7 +36,9 @@ const int daylightOffset_sec = 0;     // Jakarta doesn't observe DST
 
 extern DNSServer dnsServer;
 extern AsyncWebServer server;
-extern AsyncEventSource events;
+extern AsyncEventSource countEvents;
+extern AsyncEventSource countPerMinuteEvents;
+extern AsyncEventSource timeEvents;
 extern LiquidCrystal_I2C LCD;
 extern Preferences preferences;
 extern RTC_DS3231 rtc;
@@ -54,6 +58,12 @@ extern bool _lastState;
 
 extern DateTime _currentDate;
 extern DateTime _lastDate;
+extern DateTime _lastCalcDateMin;
+extern uint _calcCountMin;
+extern uint _lastCalcCountMin;
+extern DateTime _lastCalcDateHour;
+extern uint _calcCountHour;
+extern uint _lastCalcCountHour;
 
 void redirectToIndex(AsyncWebServerRequest *request);
 void WiFi_Init();
@@ -86,5 +96,6 @@ void deleteFile(fs::FS &fs, const char * path);
 void Log_SD(ulong interval);
 
 void Read_Switch(ulong debounceInterval, bool activeHigh);
+void Calculate_Count_Per_Hour();
 void Reset_Count();
 #endif

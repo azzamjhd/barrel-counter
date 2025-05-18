@@ -2,7 +2,9 @@
 
 DNSServer dnsServer;
 AsyncWebServer server(80);
-AsyncEventSource events(EVENT_SOURCE);
+AsyncEventSource countEvents(EVENT_SOURCE_COUNT);
+AsyncEventSource countPerMinuteEvents(EVENT_SOURCE_COUNT_PER_MINUTE);
+AsyncEventSource timeEvents(EVENT_SOURCE_TIME);
 LiquidCrystal_I2C LCD(0x27, 16, 2);
 Preferences preferences;
 RTC_DS3231 rtc;
@@ -21,6 +23,12 @@ ulong _lastDebounceTime = 0;
 bool _lastState = 0;
 DateTime _currentDate;
 DateTime _lastDate;
+DateTime _lastCalcDateMin;
+uint _lastCalcCountMin = 0;
+uint _calcCountMin = 0;
+DateTime _lastCalcDateHour;
+uint _calcCountHour = 0;
+uint _lastCalcCountHour = 0;
 
 void redirectToIndex(AsyncWebServerRequest *request)
 {
@@ -116,7 +124,8 @@ void Webserver_Init()
   // server.on("/generate_204", HTTP_GET, [](AsyncWebServerRequest *request) {
   //   request->send(204);
   // });
-  server.addHandler(&events);
+  server.addHandler(&countEvents);
+  server.addHandler(&timeEvents);
   Webserver_Routes();
   server.serveStatic("/", LittleFS, "/").setDefaultFile("index.html");
   server.serveStatic("/data", SD, "/").setCacheControl("max-age=60");
@@ -161,7 +170,7 @@ void Webserver_Routes()
             {
       String jsonString = WiFi_Scan();
       request->send(200, "application/json", jsonString); });
-  server.on("/deleteFile", HTTP_GET, [](AsyncWebServerRequest *request)
+  server.on("/deleteFile", HTTP_POST, [](AsyncWebServerRequest *request)
             {
       if (request->hasParam("file")) {
         String fileName = request->getParam("file")->value();
@@ -188,13 +197,13 @@ void Webserver_Loop()
 // @note the event name should be unique for each event
 void Send_Event(const String &eventName, const String &eventData)
 {
-  events.send(eventData.c_str());
+  countEvents.send(eventData.c_str());
 }
 
 void LCD_Init()
 {
   LCD.init();
-  LCD.backlight();
+  // LCD.backlight();
 }
 
 void Preferences_Init()
@@ -203,6 +212,14 @@ void Preferences_Init()
   _count = preferences.getUInt(PREFERENCES_KEY_NAME, 0);
   long unix = preferences.getLong("lastDate", _currentDate.unixtime());
   _lastDate = DateTime(unix);
+  long unixCalcDateMin = preferences.getLong("lastCalcDateMin", _currentDate.unixtime());
+  _lastCalcDateMin = DateTime(unixCalcDateMin);
+  long unixCalcDateHour = preferences.getLong("lastCalcDateH", _currentDate.unixtime());
+  _lastCalcDateHour = DateTime(unixCalcDateHour);
+  _calcCountMin = preferences.getUInt("calcCountMin", 0);
+  _calcCountHour = preferences.getUInt("calcCountHour", 0);
+  _lastCalcCountMin = preferences.getUInt("lastCalcCntMin", 0);
+  _lastCalcCountHour = preferences.getUInt("lastCalcCntHour", 0);
 }
 // @param interval save interval to preferences in millisecond
 void Save_To_Preferences(ulong interval)
@@ -212,6 +229,13 @@ void Save_To_Preferences(ulong interval)
   {
     preferences.putUInt(PREFERENCES_KEY_NAME, _count);
     preferences.putLong("lastDate", _currentDate.unixtime());
+    preferences.putLong("lastCalcDateMin", _lastCalcDateMin.unixtime());
+    preferences.putLong("lastCalcDateH", _lastCalcDateHour.unixtime());
+    preferences.putUInt("calcCountMin", _calcCountMin);
+    preferences.putUInt("calcCountHour", _calcCountHour);
+    preferences.putUInt("lastCalcCntMin", _lastCalcCountMin);
+    preferences.putUInt("lastCalcCntHour", _lastCalcCountHour);
+
     _lastSaveTime = currentTime;
     ESP_LOGI("BARREL_COUNTER", "Saved _count: %d", _count);
   }
@@ -220,11 +244,53 @@ void Save_To_Preferences(ulong interval)
 void Reset_Count()
 {
   _count = 0;
+  _lastCalcCountMin = 0;
+  _lastCalcCountHour = 0;
   preferences.putUInt(PREFERENCES_KEY_NAME, _count);
+  preferences.putUInt("lastCalcCntMin", _lastCalcCountMin);
+  preferences.putUInt("lastCalcCntHour", _lastCalcCountHour);
   Send_Event("counter", String(_count));
 #ifdef DEBUG
   Serial.println("Count reset to " + String(_count));
 #endif
+}
+
+void Calculate_Count_Per_Hour() {
+  DateTime now = RTC_getTime();
+  if (_lastCalcDateMin.unixtime() == 0) {
+    _lastCalcDateMin = now;
+    Serial.println("Last calc date min is 0");
+    return;
+  }
+  if (_lastCalcDateHour.unixtime() == 0) {
+    _lastCalcDateHour = now;
+    Serial.println("Last calc date hour is 0");
+    return;
+  }
+  if (now.unixtime() - _lastCalcDateMin.unixtime() >= 60) {
+    LCD.clear();
+    _lastCalcDateMin = now;
+    // if (_lastCalcCountMin == _count) return;
+    _calcCountMin = _count - _lastCalcCountMin;
+    if (_calcCountMin < 0) _calcCountMin = 0;
+    _lastCalcCountMin = _count;
+    // countPerMinuteEvents.send(String(countPerHour).c_str());
+#ifdef DEBUG
+    Serial.println("Count per minute: " + String(_calcCountMin));
+#endif
+  }
+
+  if (now.unixtime() - _lastCalcDateHour.unixtime() >= 3600) {
+    _lastCalcDateHour = now;
+    if (_lastCalcCountHour == _count) return;
+    _calcCountHour = _count - _lastCalcCountHour;
+    if (_calcCountHour < 0) _calcCountHour = 0;
+    _lastCalcCountHour = _count;
+
+#ifdef DEBUG
+    Serial.println("Count per hour: " + String(_calcCountHour));
+#endif
+  }
 }
 // @param debounceInterval interval in millisecond
 // @param activeHigh is the switch active high
@@ -239,6 +305,7 @@ void Read_Switch(ulong debounceInterval, bool activeHigh)
       if (currentState == activeHigh ? HIGH : LOW)
       {
         _count++;
+        
         Send_Event("counter", String(_count));
 #ifdef DEBUG
         Serial.println("Button pressed, count: " + String(_count));
