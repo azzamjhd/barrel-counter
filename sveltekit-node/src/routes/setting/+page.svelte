@@ -1,26 +1,15 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import ConfirmButton from "$lib/ConfirmButton.svelte";
-  import TextInputWithDropdown from "$lib/components/TextInputWithDropdown.svelte";
   let darkTheme = $state(false);
-
-  let fruitValue = $state("");
-  const allFruits = $state([
-    "Apple",
-    "Banana",
-    "Blueberry",
-    "Cherry",
-    "Cranberry",
-    "Date",
-    "Dragonfruit",
-    "Elderberry",
-    "Fig",
-    "Grape",
-    "Guava",
-    "Honeydew",
-  ]);
+  let timeEvtSource: EventSource;
+  let countEvtSource: EventSource;
+  let espTime: string = $state("");
+  let count: number = $state(0);
 
   onMount(() => {
+    getCurrentCount();
+
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
     darkTheme = prefersDark.matches;
     document.documentElement.setAttribute(
@@ -34,6 +23,17 @@
         darkTheme ? "dark" : "light"
       );
     });
+
+    countEvtSource = new EventSource("/counterStream");
+    countEvtSource.onmessage = function (event) {
+      const data = event.data;
+      count = Number(data);
+    };
+    timeEvtSource = new EventSource("/timeStream");
+    timeEvtSource.onmessage = function (event) {
+      const data = event.data;
+      espTime = data;
+    };
   });
 
   function toggleTheme(event: Event) {
@@ -67,10 +67,33 @@
       });
   }
 
+  function getCurrentCount() {
+    fetch("/getCount", {
+      method: "GET",
+      headers: { "Content-Type": "text/plain" },
+    })
+      .then((response) => {
+        if (!response.ok) {
+          console.error("Failed to get count:", response.statusText);
+        } else {
+          return response.text();
+        }
+      })
+      .then((data) => {
+        if (data) {
+          count = Number(data);
+          console.log("Current count:", count);
+        }
+      })
+      .catch((error) => {
+        console.error("Error getting count:", error);
+      });
+  }
+
   function resetCounter() {
     fetch("/resetCount", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: "GET",
+      headers: { "Content-Type": "text/plain" },
     })
       .then((response) => {
         if (!response.ok) {
@@ -84,26 +107,25 @@
       });
   }
 
-  function submitForm(event: Event) {
-    event.preventDefault(); // Prevent the default form submission
-    const form = event.target as HTMLFormElement;
-    const formData = new FormData(form);
-    const data = Object.fromEntries(formData.entries());
-    console.log("Form submitted:", data);
-    fetch("/saveSettings", {
+  function submitWiFiSettings() {
+    fetch("/wifiSetting", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        ssid: (document.getElementById("ssid") as HTMLInputElement).value,
+        password: (document.getElementById("password") as HTMLInputElement)
+          .value,
+      }),
     })
       .then((response) => {
         if (!response.ok) {
-          console.error("Failed to save settings:", response.statusText);
+          console.error("Failed to set WiFi settings:", response.statusText);
         } else {
-          console.log("Settings saved successfully");
+          console.log("WiFi settings saved successfully");
         }
       })
       .catch((error) => {
-        console.error("Error saving settings:", error);
+        console.error("Error setting WiFi settings:", error);
       });
   }
 </script>
@@ -127,9 +149,9 @@
     />
   </div>
   <hr />
-  <label>Reset Counter</label>
+  <label for="reset-counter">Reset Counter</label>
   <div class="flex justify-between gap-2 items-center px-3">
-    <div class="w-auto text-center self-center">0</div>
+    <div class="w-auto text-center self-center">{count}</div>
     <ConfirmButton
       title="Reset Counter"
       message="Are you sure you want to reset the counter?"
@@ -142,7 +164,7 @@
   <hr />
   <label for="set-time-local">Set Local Time</label>
   <div class="flex justify-between gap-2 items-center px-3">
-    <div class="text-center self-center">2025/02/01 13:54:39</div>
+    <div class="text-center self-center">{espTime ? espTime : "No Time Received"}</div>
     <ConfirmButton
       title="Set Local Time"
       message="Are you sure you want to set the RTC time to current device local time?"
@@ -155,7 +177,7 @@
   <hr />
   <label for="wifi-setting">Set WiFi Connection</label>
   <form onsubmit={submitForm} id="wifi-setting" class="my-2 mx-3">
-    <button>Scan WiFi</button>
+    <!-- <button>Scan WiFi</button> -->
     <div class="md:flex justify-between gap-2">
       <!-- <TextInputWithDropdown
         bind:value={fruitValue}
@@ -163,9 +185,22 @@
         placeholder="Type to search fruits..."
         id="fruit-selector"
       /> -->
-      <input name="ssid" type="ssid" placeholder="SSID" required />
-      <input name="password" type="password" placeholder="Password" required />
+      <input id="ssid" name="ssid" type="ssid" placeholder="SSID" required />
+      <input id="password" name="password" type="password" placeholder="Password" />
     </div>
-    <input type="submit" value="Save" />
+    <ConfirmButton
+      title="Save WiFi Settings"
+      message="Are you sure you want to save the WiFi settings?"
+      confirmLabel="OK"
+      cancelLabel="Cancel"
+      btnLabel="Save"
+      onConfirmAction={submitWiFiSettings}
+    />
   </form>
+
+  <hr/>
+  <div class="flex justify-between text-start my-2 mx-3 items-center">  
+    <label for="data-files">Data Log Files</label>
+    <a id="data-files" href="/files" class="btn btn-primary" role="button">Manage Files</a>
+  </div>
 </article>

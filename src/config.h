@@ -18,7 +18,8 @@
 #define DEBUG
 
 #define EVENT_SOURCE_COUNT "/counterStream"
-#define EVENT_SOURCE_COUNT_PER_MINUTE "/counterStreamPerMinute"
+// Renamed the event source to reflect running average
+#define EVENT_SOURCE_RUNNING_AVERAGE "/runningAverageStream"
 #define EVENT_SOURCE_TIME "/timeStream"
 #define DNS_PORT 53
 const IPAddress apIP(192, 168, 2, 1);
@@ -34,10 +35,16 @@ const unsigned long debounceInterval = 50;
 const long gmtOffset_sec = 7 * 3600;  // 7 hours in seconds
 const int daylightOffset_sec = 0;     // Jakarta doesn't observe DST
 
+// Define smoothing factors for Exponential Moving Average
+// Alpha = 1 / N, where N is the effective window size in seconds
+const double ALPHA_CPM = 1.0 / 60.0;   // Smoothing over roughly 60 seconds
+const double ALPHA_CPH = 1.0 / 3600.0; // Smoothing over roughly 3600 seconds
+
 extern DNSServer dnsServer;
 extern AsyncWebServer server;
 extern AsyncEventSource countEvents;
-extern AsyncEventSource countPerMinuteEvents;
+// Use the new event source for running average
+extern AsyncEventSource runningAverageEvents;
 extern AsyncEventSource timeEvents;
 extern LiquidCrystal_I2C LCD;
 extern Preferences preferences;
@@ -58,12 +65,13 @@ extern bool _lastState;
 
 extern DateTime _currentDate;
 extern DateTime _lastDate;
-extern DateTime _lastCalcDateMin;
-extern uint _calcCountMin;
-extern uint _lastCalcCountMin;
-extern DateTime _lastCalcDateHour;
-extern uint _calcCountHour;
-extern uint _lastCalcCountHour;
+
+// Variables for running average calculation
+extern ulong _lastTimeCheck; // Last time we checked count for rate calculation
+extern uint _lastCountCheck; // Count at the last time check
+extern double _runningAverageCPM; // Running average for counts per minute
+extern double _runningAverageCPH; // Running average for counts per hour
+
 
 void redirectToIndex(AsyncWebServerRequest *request);
 void WiFi_Init();
@@ -73,7 +81,8 @@ String WiFi_Scan();
 void Webserver_Init();
 void Webserver_Routes();
 void Webserver_Loop();
-void Send_Event(const String &eventName, const String &eventData);
+// Modified Send_Event to handle different event sources
+void Send_Event(AsyncEventSource& eventSource, const String &eventData);
 
 void LCD_Init();
 void Preferences_Init();
@@ -96,6 +105,7 @@ void deleteFile(fs::FS &fs, const char * path);
 void Log_SD(ulong interval);
 
 void Read_Switch(ulong debounceInterval, bool activeHigh);
-void Calculate_Count_Per_Hour();
+// Renamed function to reflect its new purpose
+void Update_Running_Averages();
 void Reset_Count();
 #endif
