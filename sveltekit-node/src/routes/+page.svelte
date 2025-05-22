@@ -156,7 +156,7 @@
     // 2025-05-16T08:01,7,4.0,240
 
     const lines = csvData.split("\n");
-    const parsedData: SeriesOptions[] = [];
+    const parsedData = [];
     const headers = lines[0].split(",");
     let date = lines[1].split(",")[0];
     date = date.split("T")[0];

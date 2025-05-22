@@ -149,8 +149,8 @@ void Webserver_Routes()
         Serial.println("SSID: " + ssid);
         Serial.println("Password: " + password);
 #endif
-        STA_SSID = ssid;
-        STA_PASSWORD = password;
+        AP_SSID = ssid;
+        AP_PASSWORD = password;
         preferences.putString("ssid", ssid);
         preferences.putString("password", password);
         request->send(200, "text/plain", "OK");
@@ -244,7 +244,9 @@ void Save_To_Preferences(ulong interval)
     preferences.putDouble("avgCPH", _runningAverageCPH);
     preferences.putULong("lastTimeCheck", _lastTimeCheck);
     preferences.putUInt("lastCountCheck", _lastCountCheck);
-    preferences.putUInt("lastLogCount", _lastLogCount); // Save last logged count
+    preferences.putUInt("lastLogCount", _lastLogCount);
+    preferences.putString("ssid", AP_SSID);
+    preferences.putString("password", AP_PASSWORD);
 
     _lastSaveTime = currentTime;
     ESP_LOGI("BARREL_COUNTER", "Saved _count: %d", _count);
