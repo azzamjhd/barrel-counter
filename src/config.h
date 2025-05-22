@@ -78,7 +78,6 @@ extern double _runningAverageCPH; // Running average for counts per hour
 void redirectToIndex(AsyncWebServerRequest *request);
 void WiFi_Init();
 void WiFi_Connect();
-String WiFi_Scan();
 
 void Webserver_Init();
 void Webserver_Routes();

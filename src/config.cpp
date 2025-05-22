@@ -91,27 +91,6 @@ void WiFi_Connect()
   }
 }
 
-String WiFi_Scan()
-{
-  int n = WiFi.scanNetworks();
-  JsonDocument doc;
-  JsonArray array = doc.to<JsonArray>();
-  for (int i = 0; i < n; ++i)
-  {
-    JsonObject obj = array.createNestedObject();
-    obj["SSID"] = WiFi.SSID(i);
-    obj["RSSI"] = WiFi.RSSI(i);
-    obj["Channel"] = WiFi.channel(i);
-    obj["Encryption"] = WiFi.encryptionType(i);
-  }
-  String jsonString;
-  serializeJson(doc, jsonString);
-#ifdef DEBUG
-  Serial.println("WiFi Scan Results: " + jsonString);
-#endif
-  return jsonString;
-}
-
 // @note this function is called in the setup() function
 void Webserver_Init()
 {
@@ -145,7 +124,7 @@ void Webserver_Routes()
 {
   server.on("/updateTime", HTTP_POST, [](AsyncWebServerRequest *request) {}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
             {
-      StaticJsonDocument<200> doc;
+      JsonDocument doc;
       DeserializationError error = deserializeJson(doc, data, len);
       if (!error) {
         long timeValue = doc["time"];
@@ -160,13 +139,11 @@ void Webserver_Routes()
       } });
   server.on("/wifiSetting", HTTP_POST, [](AsyncWebServerRequest *request) {}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
             {
-      StaticJsonDocument<200> doc;
+      JsonDocument doc;
       DeserializationError error = deserializeJson(doc, data, len);
       if (!error) {
-        char *temp = doc["ssid"];
-        String ssid = String(temp);
-        temp = doc["password"];
-        String password = String(temp);
+        String ssid = doc["ssid"].as<String>();
+        String password = doc["password"].as<String>();
 #ifdef DEBUG
         Serial.println("Received WiFi settings:");
         Serial.println("SSID: " + ssid);
@@ -189,10 +166,6 @@ void Webserver_Routes()
             {
       Reset_Count();
       request->send(200, "text/plain", "OK"); });
-  server.on("/wifiScan", HTTP_GET, [](AsyncWebServerRequest *request)
-            {
-      String jsonString = WiFi_Scan();
-      request->send(200, "application/json", jsonString); });
   server.on("/deleteFile", HTTP_POST, [](AsyncWebServerRequest *request) {}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
             {
       if (request->hasParam("file")) {

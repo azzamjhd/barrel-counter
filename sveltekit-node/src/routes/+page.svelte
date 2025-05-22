@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Highcharts, { Point, Series } from "highcharts/highcharts.js";
+  import Highcharts, { Point, Series, type SeriesOptions } from "highcharts/highcharts.js";
   import "highcharts/modules/exporting";
   import "highcharts/modules/offline-exporting";
   import { onMount } from "svelte";
@@ -18,7 +18,7 @@
   let dateInput = $state();
   let endDateInput = $state();
   let dateRangeText = $state();
-  let dateRangeArray = $state();
+  let dateRangeArray: Array<string> = $state();
   let countEvtSource: EventSource;
   let runningAverageEvents: EventSource;
   let countProgress = $derived(
