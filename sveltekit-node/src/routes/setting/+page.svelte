@@ -107,15 +107,16 @@
       });
   }
 
-  function submitWiFiSettings() {
+  function handleFormSubmit(event: Event) {
+    event.preventDefault();
+    const form = event.target as HTMLFormElement;
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+
     fetch("/wifiSetting", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ssid: (document.getElementById("ssid") as HTMLInputElement).value,
-        password: (document.getElementById("password") as HTMLInputElement)
-          .value,
-      }),
+      body: JSON.stringify(data),
     })
       .then((response) => {
         if (!response.ok) {
@@ -126,6 +127,23 @@
       })
       .catch((error) => {
         console.error("Error setting WiFi settings:", error);
+      });
+  }
+
+  function restartEsp() {
+    fetch("/restart", {
+      method: "GET",
+      headers: { "Content-Type": "text/plain" },
+    })
+      .then((response) => {
+        if (!response.ok) {
+          console.error("Failed to restart ESP:", response.statusText);
+        } else {
+          console.log("ESP restarted successfully");
+        }
+      })
+      .catch((error) => {
+        console.error("Error restarting ESP:", error);
       });
   }
 </script>
@@ -176,7 +194,7 @@
   </div>
   <hr />
   <label for="wifi-setting">Set WiFi Connection</label>
-  <form onsubmit={submitForm} id="wifi-setting" class="my-2 mx-3">
+  <form onsubmit={handleFormSubmit} id="wifi-setting" class="my-2 mx-3">
     <!-- <button>Scan WiFi</button> -->
     <div class="md:flex justify-between gap-2">
       <!-- <TextInputWithDropdown
@@ -188,13 +206,9 @@
       <input id="ssid" name="ssid" type="ssid" placeholder="SSID" required />
       <input id="password" name="password" type="password" placeholder="Password" />
     </div>
-    <ConfirmButton
-      title="Save WiFi Settings"
-      message="Are you sure you want to save the WiFi settings?"
-      confirmLabel="OK"
-      cancelLabel="Cancel"
-      btnLabel="Save"
-      onConfirmAction={submitWiFiSettings}
+    <input 
+      type="submit"
+      value="Save"
     />
   </form>
 
@@ -203,4 +217,15 @@
     <label for="data-files">Data Log Files</label>
     <a id="data-files" href="/files" class="btn btn-primary" role="button">Manage Files</a>
   </div>
+  <hr/>
+  <div class="flex justify-between text-start my-2 mx-3 items-center">
+    <label for="restart">Restart Esp</label>
+    <ConfirmButton
+      title="Restart Esp"
+      message="Are you sure you want to restart the ESP?"
+      confirmLabel="OK"
+      cancelLabel="Cancel"
+      btnLabel="Restart"
+      onConfirmAction={restartEsp}
+    />
 </article>

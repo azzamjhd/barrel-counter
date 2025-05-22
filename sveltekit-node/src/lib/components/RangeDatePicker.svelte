@@ -13,22 +13,14 @@
 
   $effect(() => {
     startdate = selectedStartDate;
-    enddate = selectedEndDate;
-
-    if (selectedStartDate && selectedEndDate) {
+    
+    if (selectedStartDate && selectedEndDate && isRange) {
+      enddate = selectedEndDate;
       rangeText = `${selectedStartDate} - ${selectedEndDate}`;
       rangeArray = (() => {
         const dates = [];
         let currentDate = new Date(selectedStartDate);
         const endDateObj = new Date(selectedEndDate);
-
-        // Adjust for timezone offset to avoid off-by-one day issues
-        currentDate.setMinutes(
-          currentDate.getMinutes() + currentDate.getTimezoneOffset()
-        );
-        endDateObj.setMinutes(
-          endDateObj.getMinutes() + endDateObj.getTimezoneOffset()
-        );
 
         while (currentDate <= endDateObj) {
           dates.push(currentDate.toISOString().split("T")[0]);
@@ -37,7 +29,9 @@
         return dates;
       })();
     } else {
-      rangeText = ""; // Clear range if one or both dates are not selected
+      rangeText = undefined;
+      enddate = undefined;
+      rangeArray = undefined;
     }
   });
 

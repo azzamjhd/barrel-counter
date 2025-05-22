@@ -1,10 +1,9 @@
 <script lang="ts">
-  import Highcharts from "highcharts/highcharts.js";
-  import "highcharts/modules/data";
+  import Highcharts, { Point, Series } from "highcharts/highcharts.js";
   import "highcharts/modules/exporting";
   import "highcharts/modules/offline-exporting";
   import { onMount } from "svelte";
-  import RangeDatePicker from '$lib/components/RangeDatePicker.svelte';
+  import RangeDatePicker from "$lib/components/RangeDatePicker.svelte";
 
   let chartDetails: HTMLDetailsElement = $state();
   let myChart: Highcharts.Chart;
@@ -28,8 +27,8 @@
 
   const today = new Date();
   const year = today.getFullYear();
-  const month = (today.getMonth() + 1).toString().padStart(2, '0');
-  const day = today.getDate().toString().padStart(2, '0');
+  const month = (today.getMonth() + 1).toString().padStart(2, "0");
+  const day = today.getDate().toString().padStart(2, "0");
   todayDate = `${year}-${month}-${day}`;
 
   onMount(() => {
@@ -56,9 +55,6 @@
       console.error("EventSource failed:", error);
     };
 
-    dataCsv = `/data/${todayDate}.csv`;
-    title.text = todayDate;
-
     myChart = new Highcharts.Chart({
       chart: {
         renderTo: myChartContainer,
@@ -71,62 +67,139 @@
       xAxis: { type: "datetime" },
       yAxis: { title: { text: "Drum" } },
       // plotOptions: plotOptions,
-      data: {
-        csvURL: dataCsv,
-        enablePolling: true,
-        dataRefreshRate: 60
-      },
       credits: { enabled: false },
       accessibility: { enabled: false },
-      legend: { enabled: false },
+      legend: { enabled: true },
     });
 
-
+    dateInput = todayDate;
+    updateChart();
   });
 
   function updateChart() {
+    // if just one date is selected, it will show the data for that date
+    // if two dates are selected, it will show the data for that range
     if (dateInput && !endDateInput) {
-      if (myChart.series[0]) myChart.series[0].remove(true);
-      if (String(dateInput) === todayDate) {
-        dataCsv = `/data/${dateInput}.csv`;
-        myChart.update({
-          title: { text: String(dateInput) },
-          data: {
-            csvURL: dataCsv,
-            enablePolling: true,
-          },
-        });
-      } else {
-        dataCsv = `/data/${dateInput}.csv`;
-        myChart.update({
-          title: { text: String(dateInput) },
-          data: {
-            csvURL: dataCsv,
-            enablePolling: false,
-          },
-        });
+      while (myChart.series.length > 0) {
+        myChart.series[0].remove(true);
       }
+      const newCsvUrl = `/data/${dateInput}.csv`;
+      fetch(newCsvUrl)
+        .then((response) => {
+          if (!response.ok) {
+            console.error("Failed to fetch CSV data:", response.statusText);
+            return;
+          }
+          return response.text();
+        })
+        .then((data) => {
+          if (!data) {
+            console.error("No data received for the CSV file");
+            return;
+          }
+          const parsedData = parseCsvData(data);
+          myChart.update({
+            title: { text: String(dateInput)},
+          });
+          for (let i = 0; i < parsedData.length; i++) {
+            myChart.addSeries(parsedData[i]);
+          }
+        })
+        .catch((error) => {
+          console.error("Error fetching CSV data:", error);
+        });
+        
     } else if (endDateInput) {
-      const startDate = new Date(String(dateInput));
-      const endDate = new Date(String(endDateInput));
-      if (startDate >= endDate) {
-        alert("End Date should be bigger than start date");
-        return;
+      while (myChart.series.length > 0) {
+        myChart.series[0].remove(true);
       }
+      const newCsvUrls = [];
+      for (let i = 0; i < dateRangeArray.length; i++) {
+        newCsvUrls.push(`/data/${dateRangeArray[i]}.csv`);
+      }
+      fetchMultipleCsvFiles(newCsvUrls)
+        .then((results) => {
+          results.forEach((data) => {
+            if (!data) {
+              console.error("No data received for one of the CSV files");
+              return;
+            }
+            const parsedData = parseCsvData(data);
+            for (let i = 0; i < parsedData.length; i++) {
+              parsedData[i].data = parsedData[i].data.map((point) => {
+                const newDates = point[0].split("T");
+                return [`${dateRangeArray[0]}T${newDates[1]}`, point[1]];
+              });
 
-      myChart.update({
-        title: { text: dateRangeText },
-        data: {
-          csvURL: '',
-          enablePolling: false
-        },
-      })
+              myChart.addSeries(parsedData[i]);
+            }
+          });
+          myChart.update({
+            title: { text: String(dateRangeText) },
+          });
+        })
+        .catch((error) => {
+          console.error("Error fetching CSV data:", error);
+        });
     } else {
       alert("Please select a date");
       return;
     }
     chartDetails.open = false;
     myChart.redraw();
+  }
+
+  function parseCsvData(csvData: string) {
+    // Example CSV data format:
+    // time,count,cpm,cph
+    // 2025-05-16T08:00,6,3.5,210
+    // 2025-05-16T08:01,7,4.0,240
+
+    const lines = csvData.split("\n");
+    const parsedData: SeriesOptions[] = [];
+    const headers = lines[0].split(",");
+    let date = lines[1].split(",")[0];
+    date = date.split("T")[0];
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (i === 0) {
+        for (let j = 1; j < headers.length; j++) {
+          const name = headers[j];
+          parsedData.push({
+            name: name + " " + date,
+            data: [],
+          });
+        }
+      } else if (line) {
+        const values = line.split(",");
+        for (let j = 1; j < headers.length; j++) {
+          if (parsedData[j - 1].data) {
+            if (values[j] !== "") {
+              parsedData[j - 1].data.push([values[0], Number(values[j])]);
+            }
+          }
+        }
+      }
+    }
+    return parsedData;
+  }
+
+  async function fetchMultipleCsvFiles(csvUrls: string[]) {
+    const promises = csvUrls.map((url) =>
+      fetch(url)
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`Failed to fetch ${url}: ${response.statusText}`);
+          }
+          return response.text();
+        })
+        .catch((error) => {
+          console.error("Error fetching CSV data:", error);
+        })
+    );
+
+    const results = await Promise.all(promises);
+    return results;
   }
 
   function getCurrentCount() {
@@ -143,10 +216,7 @@
       })
       .then((data) => {
         if (data) {
-          const counts = data.split(",");
-          count = Number(counts[0]);
-          countPerMinute = Number(counts[1]);
-          countPerHour = Number(counts[2]);
+          count = Number(data);
           console.log("Current count:", count);
         }
       })

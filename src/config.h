@@ -24,13 +24,15 @@
 #define DNS_PORT 53
 const IPAddress apIP(192, 168, 2, 1);
 const IPAddress gateway(255, 255, 255, 0);
+#define DEFAULT_AP_SSID "Drum Counter"
+#define DEFAULT_AP_PASSWORD ""
 
 #define SWITCH_PIN 26
 #define PREFERENCES_KEY_NAME "count"
 #define INPUT_HIGH true
 
 const unsigned long saveInterval = 5000;
-const unsigned long debounceInterval = 50;
+const unsigned long debounceInterval = 500;
 // Configure time for GMT+7 (Jakarta)
 const long gmtOffset_sec = 7 * 3600;  // 7 hours in seconds
 const int daylightOffset_sec = 0;     // Jakarta doesn't observe DST
@@ -81,13 +83,11 @@ String WiFi_Scan();
 void Webserver_Init();
 void Webserver_Routes();
 void Webserver_Loop();
-// Modified Send_Event to handle different event sources
 void Send_Event(AsyncEventSource& eventSource, const String &eventData);
 
 void LCD_Init();
 void Preferences_Init();
 void Save_To_Preferences(ulong interval);
-String getCurrentLocalTime(bool showDate);
 
 void RTC_Init();
 DateTime RTC_getTime();
@@ -105,7 +105,6 @@ void deleteFile(fs::FS &fs, const char * path);
 void Log_SD(ulong interval);
 
 void Read_Switch(ulong debounceInterval, bool activeHigh);
-// Renamed function to reflect its new purpose
 void Update_Running_Averages();
 void Reset_Count();
 #endif

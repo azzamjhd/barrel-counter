@@ -26,11 +26,10 @@ DateTime _currentDate;
 DateTime _lastDate;
 
 // Variables for running average calculation
-ulong _lastTimeCheck = 0; // Last time we checked count for rate calculation
-uint _lastCountCheck = 0; // Count at the last time check
+ulong _lastTimeCheck = 0;        // Last time we checked count for rate calculation
+uint _lastCountCheck = 0;        // Count at the last time check
 double _runningAverageCPM = 0.0; // Running average for counts per minute
 double _runningAverageCPH = 0.0; // Running average for counts per hour
-
 
 void redirectToIndex(AsyncWebServerRequest *request)
 {
@@ -43,12 +42,14 @@ void WiFi_Init()
   WiFi.mode(WIFI_OFF);
   // WiFi.mode(WIFI_AP_STA);
   WiFi.mode(WIFI_AP);
-#ifndef PASSWORD
-  WiFi.softAP(AP_SSID.c_str());
-#else
-  WiFi.softAP(AP_SSID.c_str(), AP_PASSWORD.c_str());
-// WiFi.begin(STA_SSID.c_str(), STA_PASSWORD.c_str());
-#endif
+  if (AP_PASSWORD == "")
+  {
+    WiFi.softAP(AP_SSID.c_str());
+  }
+  else
+  {
+    WiFi.softAP(AP_SSID.c_str(), AP_PASSWORD.c_str());
+  }
   WiFi.softAPConfig(apIP, apIP, gateway);
   // dnsServer.start(DNS_PORT, "*", apIP);
   // WiFi_Connect();
@@ -142,21 +143,39 @@ void Webserver_Init()
 
 void Webserver_Routes()
 {
-  server.on("/updateTime", HTTP_POST,
-            // No response here; we wait until the body is received.
-            [](AsyncWebServerRequest *request) {},
-            // onUpload handler (not used here)
-            NULL,
-            // onBody: called as the request body is received
-            [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+  server.on("/updateTime", HTTP_POST, [](AsyncWebServerRequest *request) {}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
             {
-      // Use a StaticJsonDocument; adjust capacity as needed
       StaticJsonDocument<200> doc;
       DeserializationError error = deserializeJson(doc, data, len);
       if (!error) {
         long timeValue = doc["time"];
+#ifdef DEBUG
         Serial.println("Time: " + String(timeValue));
+#endif
         rtc.adjust(DateTime(timeValue));
+        request->send(200, "text/plain", "OK");
+      } else {
+        Serial.println("JSON parse error");
+        request->send(400, "text/plain", "Bad Request");
+      } });
+  server.on("/wifiSetting", HTTP_POST, [](AsyncWebServerRequest *request) {}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
+            {
+      StaticJsonDocument<200> doc;
+      DeserializationError error = deserializeJson(doc, data, len);
+      if (!error) {
+        char *temp = doc["ssid"];
+        String ssid = String(temp);
+        temp = doc["password"];
+        String password = String(temp);
+#ifdef DEBUG
+        Serial.println("Received WiFi settings:");
+        Serial.println("SSID: " + ssid);
+        Serial.println("Password: " + password);
+#endif
+        STA_SSID = ssid;
+        STA_PASSWORD = password;
+        preferences.putString("ssid", ssid);
+        preferences.putString("password", password);
         request->send(200, "text/plain", "OK");
       } else {
         Serial.println("JSON parse error");
@@ -174,11 +193,11 @@ void Webserver_Routes()
             {
       String jsonString = WiFi_Scan();
       request->send(200, "application/json", jsonString); });
-  server.on("/deleteFile", HTTP_POST, [](AsyncWebServerRequest *request)
+  server.on("/deleteFile", HTTP_POST, [](AsyncWebServerRequest *request) {}, NULL, [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total)
             {
       if (request->hasParam("file")) {
         String fileName = request->getParam("file")->value();
-        if (LittleFS.remove(fileName)) request->send(200, "text/plain", "File deleted");
+        if (SD.remove(fileName)) request->send(200, "text/plain", "File deleted");
         else request->send(500, "text/plain", "Failed to delete file");
       }
       else request->send(400, "text/plain", "Bad Request"); });
@@ -190,6 +209,11 @@ void Webserver_Routes()
       }
       String jsonString = listDir(SD, path.c_str(), 2);
       request->send(200, "application/json", jsonString); });
+  server.on("/restart", HTTP_GET, [](AsyncWebServerRequest *request)
+            {
+      request->send(200, "text/plain", "OK");
+      delay(1000);
+      ESP.restart(); });
 }
 // @note this function is called in the loop() function
 void Webserver_Loop()
@@ -199,7 +223,7 @@ void Webserver_Loop()
 // @param eventSource the AsyncEventSource to send the event to
 // @param eventData data to send with the event
 // @note the event name should be unique for each event
-void Send_Event(AsyncEventSource& eventSource, const String &eventData)
+void Send_Event(AsyncEventSource &eventSource, const String &eventData)
 {
   eventSource.send(eventData.c_str());
 }
@@ -222,14 +246,16 @@ void Preferences_Init()
   _runningAverageCPH = preferences.getDouble("avgCPH", 0.0);
   _lastTimeCheck = preferences.getULong("lastTimeCheck", 0);
   _lastCountCheck = preferences.getUInt("lastCountCheck", 0);
-  _lastLogCount = preferences.getUInt("lastLogCount", 0); // Load last logged count
+  _lastLogCount = preferences.getUInt("lastLogCount", 0);
+  AP_SSID = preferences.getString("ssid", DEFAULT_AP_SSID);
+  AP_PASSWORD = preferences.getString("password", DEFAULT_AP_PASSWORD);
 
   // If _lastTimeCheck is 0 (first boot or after reset), initialize it
-  if (_lastTimeCheck == 0) {
-      _lastTimeCheck = millis();
-      _lastCountCheck = _count;
+  if (_lastTimeCheck == 0)
+  {
+    _lastTimeCheck = millis();
+    _lastCountCheck = _count;
   }
-
 }
 // @param interval save interval to preferences in millisecond
 void Save_To_Preferences(ulong interval)
@@ -247,7 +273,6 @@ void Save_To_Preferences(ulong interval)
     preferences.putUInt("lastCountCheck", _lastCountCheck);
     preferences.putUInt("lastLogCount", _lastLogCount); // Save last logged count
 
-
     _lastSaveTime = currentTime;
     ESP_LOGI("BARREL_COUNTER", "Saved _count: %d", _count);
     ESP_LOGI("BARREL_COUNTER", "Saved avgCPM: %.2f, avgCPH: %.2f", _runningAverageCPM, _runningAverageCPH);
@@ -262,7 +287,7 @@ void Reset_Count()
   _runningAverageCPH = 0.0;
   _lastCountCheck = 0;
   _lastTimeCheck = millis(); // Reset time check on count reset
-  _lastLogCount = 0; // Reset last logged count on total count reset
+  _lastLogCount = 0;         // Reset last logged count on total count reset
 
   preferences.putUInt(PREFERENCES_KEY_NAME, _count);
   preferences.putDouble("avgCPM", _runningAverageCPM);
@@ -270,7 +295,6 @@ void Reset_Count()
   preferences.putUInt("lastCountCheck", _lastCountCheck);
   preferences.putULong("lastTimeCheck", _lastTimeCheck);
   preferences.putUInt("lastLogCount", _lastLogCount);
-
 
   Send_Event(countEvents, String(_count));
   // Send updated running averages after reset
@@ -285,16 +309,19 @@ void Reset_Count()
 }
 
 // @note This function calculates and updates the running averages
-void Update_Running_Averages() {
+void Update_Running_Averages()
+{
   unsigned long currentTime = millis();
   // Calculate rate periodically, e.g., every 100ms or 1000ms
   const unsigned long updateInterval = 1000; // Update every 1 second
 
-  if (currentTime - _lastTimeCheck >= updateInterval) {
+  if (currentTime - _lastTimeCheck >= updateInterval)
+  {
     unsigned long deltaTime = currentTime - _lastTimeCheck;
     uint countIncrease = _count - _lastCountCheck;
 
-    if (deltaTime > 0) {
+    if (deltaTime > 0)
+    {
       // Calculate the instantaneous rate in counts per millisecond
       double currentRatePerMs = (double)countIncrease / deltaTime;
 
@@ -309,13 +336,15 @@ void Update_Running_Averages() {
       _runningAverageCPH = (ALPHA_CPH * currentRatePerHour) + ((1.0 - ALPHA_CPH) * _runningAverageCPH);
 
       // Ensure averages don't go below zero due to floating point inaccuracies
-      if (_runningAverageCPM < 0) _runningAverageCPM = 0;
-      if (_runningAverageCPH < 0) _runningAverageCPH = 0;
+      if (_runningAverageCPM < 0)
+        _runningAverageCPM = 0;
+      if (_runningAverageCPH < 0)
+        _runningAverageCPH = 0;
 
-// #ifdef DEBUG
-//       Serial.printf("Count Increase: %u, Delta Time: %lu ms, Rate/s: %.2f\n", countIncrease, deltaTime, currentRatePerMs * 1000.0);
-//       Serial.printf("Running Avg CPM: %.2f, Running Avg CPH: %.2f\n", _runningAverageCPM, _runningAverageCPH);
-// #endif
+      // #ifdef DEBUG
+      //       Serial.printf("Count Increase: %u, Delta Time: %lu ms, Rate/s: %.2f\n", countIncrease, deltaTime, currentRatePerMs * 1000.0);
+      //       Serial.printf("Running Avg CPM: %.2f, Running Avg CPH: %.2f\n", _runningAverageCPM, _runningAverageCPH);
+      // #endif
 
       // Send the updated running averages via event source
       String avgData = String(_runningAverageCPM) + "," + String(_runningAverageCPH);
@@ -734,29 +763,28 @@ void Log_SD(ulong interval)
       dataFile.close();
 
 #ifdef DEBUG
-         if (newFile)
-         {
-           Serial.println("New file created and first data logged.");
-         }
-         else
-         {
-           Serial.println("Data appended to existing file.");
-         }
-         Serial.print("Logged to ");
-         Serial.print(filename);
-         Serial.print(": ");
-         Serial.print(fullTimestamp);
-         Serial.print(", ");
-         Serial.print(_count);
-         Serial.print(", ");
-         Serial.print(_runningAverageCPM, 2);
-         Serial.print(", ");
-         Serial.println(_runningAverageCPH, 2);
+      if (newFile)
+      {
+        Serial.println("New file created and first data logged.");
+      }
+      else
+      {
+        Serial.println("Data appended to existing file.");
+      }
+      Serial.print("Logged to ");
+      Serial.print(filename);
+      Serial.print(": ");
+      Serial.print(fullTimestamp);
+      Serial.print(", ");
+      Serial.print(_count);
+      Serial.print(", ");
+      Serial.print(_runningAverageCPM, 2);
+      Serial.print(", ");
+      Serial.println(_runningAverageCPH, 2);
 #endif
 
       _lastLogTime = currentTime;
       _lastLogCount = _count; // Update the last logged count
-
     }
     else
     {
@@ -764,9 +792,11 @@ void Log_SD(ulong interval)
       Serial.println("Error: File handle is invalid after open attempt.");
 #endif
     }
-  } else if (SD.cardType() == CARD_NONE) {
+  }
+  else if (SD.cardType() == CARD_NONE)
+  {
 #ifdef DEBUG
-      // Optionally print a message if SD card is not present, but not repeatedly
+    // Optionally print a message if SD card is not present, but not repeatedly
 #endif
   }
   // If the interval has passed but the count hasn't changed, we just skip logging for this interval.
