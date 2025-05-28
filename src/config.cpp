@@ -204,7 +204,7 @@ void Send_Event(AsyncEventSource &eventSource, const String &eventData)
 void LCD_Init()
 {
   LCD.init();
-  // LCD.backlight();
+  LCD.backlight();
 }
 
 void Preferences_Init()
@@ -331,13 +331,24 @@ void Update_Running_Averages()
     _lastCountCheck = _count;
   }
 }
+void Switch_Init(bool activeHigh)
+{
+  if (activeHigh)
+  {
+    pinMode(SWITCH_PIN_1, INPUT_PULLDOWN);
+    pinMode(SWITCH_PIN_2, INPUT_PULLDOWN);
+  } else {
+    pinMode(SWITCH_PIN_1, INPUT_PULLUP);
+    pinMode(SWITCH_PIN_2, INPUT_PULLUP);
+  }
+}
 
 // @param debounceInterval interval in millisecond
 // @param activeHigh is the switch active high
 void Read_Switch(ulong debounceInterval, bool activeHigh)
 {
   ulong currentTime = millis();
-  bool currentState = digitalRead(SWITCH_PIN);
+  bool currentState = digitalRead(SWITCH_PIN_2);
   if (currentTime - _lastDebounceTime > debounceInterval)
   {
     if (currentState != _lastState)
@@ -363,8 +374,8 @@ void RTC_Init()
   {
     Serial.println("Couldn't find RTC");
     Serial.flush();
-    while (1)
-      ;
+    // while (1)
+    //   ;
   }
   if (rtc.lostPower())
   {
@@ -692,7 +703,7 @@ void Log_SD(ulong interval)
       if (dataFile)
       {
         // Add columns for running averages
-        dataFile.println("time,total_count,cpm_avg,cph_avg");
+        dataFile.println("time,count,cpm,cph");
         newFile = true;
       }
       else
@@ -726,13 +737,17 @@ void Log_SD(ulong interval)
       String fullTimestamp = now.timestamp();
 
       // Attempt to write data
-      size_t bytesWritten = dataFile.print(fullTimestamp);
-      bytesWritten += dataFile.print(",");
-      bytesWritten += dataFile.print(_count); // Log total count
-      bytesWritten += dataFile.print(",");
-      bytesWritten += dataFile.print(_runningAverageCPM, 2); // Log running average CPM with 2 decimal places
-      bytesWritten += dataFile.print(",");
-      bytesWritten += dataFile.println(_runningAverageCPH, 2); // Log running average CPH with 2 decimal places
+      // Prepare the log entry as a single string
+      String logEntry = fullTimestamp;
+      logEntry += ",";
+      logEntry += String(_count); // Log total count
+      logEntry += ",";
+      logEntry += String(_runningAverageCPM, 2); // Log running average CPM with 2 decimal places
+      logEntry += ",";
+      logEntry += String(_runningAverageCPH, 2); // Log running average CPH with 2 decimal places
+
+      // Write the consolidated log entry
+      dataFile.println(logEntry);
 
       // Close the file regardless of perceived write success to free resources.
       dataFile.close();

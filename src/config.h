@@ -27,9 +27,10 @@ const IPAddress gateway(255, 255, 255, 0);
 #define DEFAULT_AP_SSID "Drum Counter"
 #define DEFAULT_AP_PASSWORD ""
 
-#define SWITCH_PIN 26
+#define SWITCH_PIN_1 25
+#define SWITCH_PIN_2 26
 #define PREFERENCES_KEY_NAME "count"
-#define INPUT_HIGH true
+#define INPUT_HIGH false
 
 const unsigned long saveInterval = 5000;
 const unsigned long debounceInterval = 500;
@@ -61,10 +62,17 @@ extern ulong _lastLogTime;
 extern uint _lastLogCount;
 
 extern volatile uint _count;
-extern ulong _lastSaveTime;
-extern ulong _lastDebounceTime;
 extern bool _lastState;
+extern ulong _lastDebounceTime;
 
+extern volatile uint _count1;
+extern volatile uint _count2;
+extern bool _lastState1;
+extern bool _lastState2;
+extern ulong _lastDebounceTime1;
+extern ulong _lastDebounceTime2;
+
+extern ulong _lastSaveTime;
 extern DateTime _currentDate;
 extern DateTime _lastDate;
 
@@ -73,6 +81,12 @@ extern ulong _lastTimeCheck; // Last time we checked count for rate calculation
 extern uint _lastCountCheck; // Count at the last time check
 extern double _runningAverageCPM; // Running average for counts per minute
 extern double _runningAverageCPH; // Running average for counts per hour
+extern uint _lastCountCheck1;
+extern uint _lastCountCheck2;
+extern double _runningAverageCPM1; // Running average for counts per minute for first switch
+extern double _runningAverageCPM2; // Running average for counts per minute for second switch
+extern double _runningAverageCPH1; // Running average for counts per hour for first switch
+extern double _runningAverageCPH2; // Running average for counts per hour for second switch
 
 
 void redirectToIndex(AsyncWebServerRequest *request);
@@ -103,6 +117,7 @@ void deleteFile(fs::FS &fs, const char * path);
 
 void Log_SD(ulong interval);
 
+void Switch_Init(bool activeHigh);
 void Read_Switch(ulong debounceInterval, bool activeHigh);
 void Update_Running_Averages();
 void Reset_Count();

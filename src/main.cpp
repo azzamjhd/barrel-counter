@@ -5,19 +5,10 @@
 
 #include <config.h>
 
-// These variables are now extern in config.h and defined in config.cpp
-// unsigned long lastDebounceTime = 0;
-// unsigned long lastSaveTime = 0;
-// volatile bool lastState = LOW;
-
 void setup() {
   Serial.begin(115200);
   // Setup the interrupt for the button on pin 26
-  if (INPUT_HIGH) {
-    pinMode(SWITCH_PIN, INPUT_PULLDOWN);
-  } else {
-    pinMode(SWITCH_PIN, INPUT_PULLUP);
-  }
+  Switch_Init(INPUT_HIGH);
   RTC_Init();
   LCD_Init();
   SD_Init();
@@ -67,14 +58,14 @@ void loop() {
   LCD.print(formattedTime);
   // Display the _count and running averages on the second row
   LCD.setCursor(0, 1);
-  LCD.print("C:");
-  LCD.print(_count);
-  LCD.print(" R:");
-  // Display running averages, maybe rounded to 1 or 2 decimal places
-  LCD.print(String(_runningAverageCPM, 1)); // CPM with 1 decimal place
-  LCD.print("m ");
-  LCD.print(String(_runningAverageCPH, 1)); // CPH with 1 decimal place
-  LCD.print("h");
+  String counterText = "C: ";
+  counterText += String(_count);
+  counterText += " R: ";
+  counterText += String(_runningAverageCPM, 1);
+  counterText += "m ";
+  counterText += String(_runningAverageCPH, 1);
+  counterText += "h";
+  LCD.print(counterText);
 
   // Save the _count and running averages to the preferences every saveInterval
   Save_To_Preferences(saveInterval); // Use saveInterval from config.h
