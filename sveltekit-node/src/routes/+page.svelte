@@ -4,6 +4,7 @@
   import "highcharts/modules/offline-exporting";
   import { onMount } from "svelte";
   import RangeDatePicker from "$lib/components/RangeDatePicker.svelte";
+  import HistoryTable from "$lib/components/HistoryTable.svelte";
 
   let chartDetails: HTMLDetailsElement = $state();
   let myChart: Highcharts.Chart;
@@ -24,6 +25,9 @@
   let countProgress = $derived(
     countTarget > 0 ? (count / countTarget) * 100 : 0
   );
+
+  let historyURL: string = $state("");
+  let enablePolling: boolean = $state(false);
 
   const today = new Date();
   const year = today.getFullYear();
@@ -83,7 +87,13 @@
       while (myChart.series.length > 0) {
         myChart.series[0].remove(true);
       }
+      if (dateInput === todayDate) {
+        enablePolling = true;
+      } else {
+        enablePolling = false;
+      }
       const newCsvUrl = `/data/${dateInput}.csv`;
+      historyURL = newCsvUrl;
       fetch(newCsvUrl)
         .then((response) => {
           if (!response.ok) {
@@ -267,3 +277,5 @@
   <!-- <button onclick={addRandomPoint}>Add Random</button> -->
   <!-- <button onclick={()=>{myChart.destroy()}} >Reset</button> -->
 </article>
+
+<HistoryTable csvUrl={historyURL} {enablePolling} />

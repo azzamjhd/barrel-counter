@@ -1,14 +1,21 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import ConfirmButton from "$lib/ConfirmButton.svelte";
+  import ConfirmButtonInput from "$lib/ConfirmButtonInput.svelte";
   let darkTheme = $state(false);
   let timeEvtSource: EventSource;
   let countEvtSource: EventSource;
   let espTime: string = $state("");
   let count: number = $state(0);
 
+  // scehdule variables
+  let scheduleEnabled: boolean = $state(false);
+  let startTime: string = $state("");
+  let endTime: string = $state("");
+
   onMount(() => {
     getCurrentCount();
+    getSchedule();
 
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)");
     darkTheme = prefersDark.matches;
@@ -107,26 +114,85 @@
       });
   }
 
-  function handleFormSubmit(event: Event) {
-    event.preventDefault();
-    const form = event.target as HTMLFormElement;
-    const formData = new FormData(form);
-    const data = Object.fromEntries(formData.entries());
+  function saveWiFiSetting() {
+    const ssid = (document.getElementById("ssid") as HTMLInputElement).value;
+    const password = (document.getElementById("password") as HTMLInputElement)
+      .value;
+
+    if (!ssid) {
+      console.error("SSID is required");
+      return;
+    }
+
+    const wifiData = { ssid, password };
 
     fetch("/wifiSetting", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
+      body: JSON.stringify(wifiData),
     })
       .then((response) => {
         if (!response.ok) {
-          console.error("Failed to set WiFi settings:", response.statusText);
+          console.error("Failed to save WiFi settings:", response.statusText);
         } else {
           console.log("WiFi settings saved successfully");
         }
       })
       .catch((error) => {
-        console.error("Error setting WiFi settings:", error);
+        console.error("Error saving WiFi settings:", error);
+      });
+  }
+
+  function getSchedule() {
+    fetch("/getSchedule", {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    })
+      .then((response) => {
+        if (!response.ok) {
+          console.error("Failed to get schedule:", response.statusText);
+        } else {
+          return response.json();
+        }
+      })
+      .then((data) => {
+        if (data) {
+          scheduleEnabled = data.enabled;
+          startTime = `${String(data.startHour).padStart(2, '0')}:${String(data.startMinute).padStart(2, '0')}`;
+          endTime = `${String(data.stopHour).padStart(2, '0')}:${String(data.stopMinute).padStart(2, '0')}`;
+        }
+      })
+      .catch((error) => {
+        console.error("Error getting schedule:", error);
+      });
+  }
+
+  function saveSchedule() {
+    const [startHourStr, startMinuteStr] = startTime.split(":");
+    const [endHourStr, endMinuteStr] = endTime.split(":");
+
+    const scheduleData = {
+      startHour: parseInt(startHourStr, 10),
+      startMinute: parseInt(startMinuteStr, 10),
+      stopHour: parseInt(endHourStr, 10),
+      stopMinute: parseInt(endMinuteStr, 10),
+      enabled: scheduleEnabled,
+    };
+
+    fetch("/setSchedule", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(scheduleData),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          console.error("Failed to save schedule:", response.statusText);
+        } else {
+          console.log("Schedule saved successfully");
+        }
+      })
+      .catch((error) => {
+        console.error("Error saving schedule:", error);
       });
   }
 
@@ -167,6 +233,28 @@
     />
   </div>
   <hr />
+  <div class="flex justify-between text-start my-2 mx-3 items-center">
+    <label>Schedule</label>
+    <input
+      name="schedule"
+      type="checkbox"
+      role="switch"
+      bind:checked={scheduleEnabled}
+    />
+  </div>
+  <div class="md:flex justify-between gap-2">
+    <input type="time" name="start-time" id="start-time" bind:value={startTime} />
+    <input type="time" name="end-time" id="end-time" bind:value={endTime} />
+  </div>
+  <ConfirmButtonInput
+    title="Set Schedule"
+    message="Are you sure you want to set the schedule?"
+    confirmLabel="OK"
+    cancelLabel="Cancel"
+    btnLabel="Set Schedule"
+    onConfirmAction={saveSchedule}
+  />
+  <hr />
   <label for="reset-counter">Reset Counter</label>
   <div class="flex justify-between gap-2 items-center px-3">
     <div class="w-auto text-center self-center">{count}</div>
@@ -194,7 +282,7 @@
   </div>
   <hr />
   <label for="wifi-setting">Set WiFi Connection</label>
-  <form onsubmit={handleFormSubmit} id="wifi-setting" class="my-2 mx-3">
+  <form id="wifi-setting" class="my-2 mx-3">
     <!-- <button>Scan WiFi</button> -->
     <div class="md:flex justify-between gap-2">
       <!-- <TextInputWithDropdown
@@ -206,9 +294,13 @@
       <input id="ssid" name="ssid" type="ssid" placeholder="SSID" required />
       <input id="password" name="password" type="password" placeholder="Password" />
     </div>
-    <input 
-      type="submit"
-      value="Save"
+    <ConfirmButtonInput
+      title="Save WiFi Settings"
+      message="Are you sure you want to save the WiFi settings?"
+      confirmLabel="OK"
+      cancelLabel="Cancel"
+      btnLabel="Save"
+      onConfirmAction={saveWiFiSetting}
     />
   </form>
 

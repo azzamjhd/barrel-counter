@@ -18,7 +18,6 @@
 #define DEBUG
 
 #define EVENT_SOURCE_COUNT "/counterStream"
-// Renamed the event source to reflect running average
 #define EVENT_SOURCE_RUNNING_AVERAGE "/runningAverageStream"
 #define EVENT_SOURCE_TIME "/timeStream"
 #define DNS_PORT 53
@@ -27,26 +26,30 @@ const IPAddress gateway(255, 255, 255, 0);
 #define DEFAULT_AP_SSID "Drum Counter"
 #define DEFAULT_AP_PASSWORD ""
 
-#define SWITCH_PIN_1 25
-#define SWITCH_PIN_2 26
+#define SWITCH_PIN_1 25 // Limit switch 1 on GPIO 25
+#define SWITCH_PIN_2 26 // Limit switch 2 on GPIO 26
 #define PREFERENCES_KEY_NAME "count"
-#define INPUT_HIGH false
+#define ACTIVE_LOW_SWITCH true // Set to true for active-low inputs, false for active-high
+
+// Preference keys for schedule settings
+#define PREF_KEY_SCH_ENABLED "schEnabled"
+#define PREF_KEY_SCH_START_H "schStartH"
+#define PREF_KEY_SCH_START_M "schStartM"
+#define PREF_KEY_SCH_STOP_H "schStopH"
+#define PREF_KEY_SCH_STOP_M "schStopM"
+
 
 const unsigned long saveInterval = 5000;
-const unsigned long debounceInterval = 500;
-// Configure time for GMT+7 (Jakarta)
+const unsigned long debounceInterval = 500; // Milliseconds for switch debounce
 const long gmtOffset_sec = 7 * 3600;  // 7 hours in seconds
 const int daylightOffset_sec = 0;     // Jakarta doesn't observe DST
 
-// Define smoothing factors for Exponential Moving Average
-// Alpha = 1 / N, where N is the effective window size in seconds
-const double ALPHA_CPM = 1.0 / 60.0;   // Smoothing over roughly 60 seconds
-const double ALPHA_CPH = 1.0 / 3600.0; // Smoothing over roughly 3600 seconds
+const double ALPHA_CPM = 1.0 / 60.0;
+const double ALPHA_CPH = 1.0 / 3600.0;
 
 extern DNSServer dnsServer;
 extern AsyncWebServer server;
 extern AsyncEventSource countEvents;
-// Use the new event source for running average
 extern AsyncEventSource runningAverageEvents;
 extern AsyncEventSource timeEvents;
 extern LiquidCrystal_I2C LCD;
@@ -62,32 +65,30 @@ extern ulong _lastLogTime;
 extern uint _lastLogCount;
 
 extern volatile uint _count;
-extern bool _lastState;
-extern ulong _lastDebounceTime;
-
-extern volatile uint _count1;
-extern volatile uint _count2;
-extern bool _lastState1;
-extern bool _lastState2;
-extern ulong _lastDebounceTime1;
-extern ulong _lastDebounceTime2;
-
 extern ulong _lastSaveTime;
+
+extern uint8_t debouncingStatePin1;
+extern uint8_t debouncedStatePin1;
+extern unsigned long lastDebounceTimePin1;
+
+extern uint8_t debouncingStatePin2;
+extern uint8_t debouncedStatePin2;
+extern unsigned long lastDebounceTimePin2;
+
 extern DateTime _currentDate;
 extern DateTime _lastDate;
 
-// Variables for running average calculation
-extern ulong _lastTimeCheck; // Last time we checked count for rate calculation
-extern uint _lastCountCheck; // Count at the last time check
-extern double _runningAverageCPM; // Running average for counts per minute
-extern double _runningAverageCPH; // Running average for counts per hour
-extern uint _lastCountCheck1;
-extern uint _lastCountCheck2;
-extern double _runningAverageCPM1; // Running average for counts per minute for first switch
-extern double _runningAverageCPM2; // Running average for counts per minute for second switch
-extern double _runningAverageCPH1; // Running average for counts per hour for first switch
-extern double _runningAverageCPH2; // Running average for counts per hour for second switch
+extern ulong _lastTimeCheck;
+extern uint _lastCountCheck;
+extern double _runningAverageCPM;
+extern double _runningAverageCPH;
 
+// Schedule variables
+extern bool scheduleEnabled; 
+extern int startHour;      
+extern int startMinute;    
+extern int stopHour;       
+extern int stopMinute;     
 
 void redirectToIndex(AsyncWebServerRequest *request);
 void WiFi_Init();
@@ -107,18 +108,14 @@ DateTime RTC_getTime();
 
 void SD_Init();
 String listDir(fs::FS &fs, const char * dirname, uint8_t levels);
-void createDir(fs::FS &fs, const char * path);
-void removeDir(fs::FS &fs, const char * path);
-void readFile(fs::FS &fs, const char * path);
-void writeFile(fs::FS &fs, const char * path, const char * message);
-void appendFile(fs::FS &fs, const char * path, const char * message);
-void renameFile(fs::FS &fs, const char * path1, const char * path2);
-void deleteFile(fs::FS &fs, const char * path);
 
 void Log_SD(ulong interval);
 
-void Switch_Init(bool activeHigh);
-void Read_Switch(ulong debounceInterval, bool activeHigh);
+void Read_Switches(ulong debounceInterval, bool isActiveLow);
 void Update_Running_Averages();
 void Reset_Count();
+
+// Function to check if current time is within scheduled counting range
+bool isTimeWithinScheduledRange(const DateTime& now);
+
 #endif
